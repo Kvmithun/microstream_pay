@@ -21,13 +21,14 @@ def my_streams():
 @require_role("receiver")
 def claim():
     data = request.get_json(force=True) if request.data else {}
+    app_id = data.get("app_id")
     tx_id = data.get("tx_id")
-    if not tx_id:
-        return jsonify({"error": "tx_id is required"}), 400
+    if not app_id or not tx_id:
+        return jsonify({"error": "app_id and tx_id are required"}), 400
 
-    before = current_app.algorand_service.get_status()
+    before = current_app.algorand_service.get_status(app_id)
     existing = current_app.stream_model.find_by_stream_id(str(before["app_id"]))
-    status = current_app.algorand_service.verify_claim(tx_id, g.current_user["wallet_address"])
+    status = current_app.algorand_service.verify_claim(app_id, tx_id, g.current_user["wallet_address"])
     stream = current_app.stream_model.update_stream(
         str(status["app_id"]),
         {

@@ -1,5 +1,6 @@
 import base64
 from datetime import datetime, timezone
+from pathlib import Path
 
 from algosdk import encoding
 from algosdk.logic import get_application_address
@@ -14,7 +15,9 @@ class AlgorandService:
 
     def __init__(self, config):
         self.algod_client = algod.AlgodClient(config["ALGOD_TOKEN"], config["ALGOD_ADDRESS"])
-        self.app_id = config["APP_ID"]
+        self.default_app_id = config.get("APP_ID")
+        self.contract_dir = Path(__file__).resolve().parents[2] / "contract"
+        self._compiled_contract = None
 
     def _decode_state_value(self, value):
         if value.get("type") == 2:
@@ -26,8 +29,8 @@ class AlgorandService:
             return encoding.encode_address(decoded)
         return decoded.decode("utf-8") if decoded else ""
 
-    def _global_state(self):
-        info = self.algod_client.application_info(self.app_id)
+    def _global_state(self, app_id):
+        info = self.algod_client.application_info(int(app_id))
         state = {}
         for item in info["params"].get("global-state", []):
             key = base64.b64decode(item["key"]).decode("utf-8")
@@ -45,8 +48,15 @@ class AlgorandService:
             return "stopped"
         return "unknown"
 
-    def get_status(self):
-        app_info, state = self._global_state()
+    def _resolve_app_id(self, app_id=None):
+        resolved = app_id or self.default_app_id
+        if not resolved:
+            raise ValueError("No stream app id was provided.")
+        return int(resolved)
+
+    def get_status(self, app_id=None):
+        resolved_app_id = self._resolve_app_id(app_id)
+        app_info, state = self._global_state(resolved_app_id)
         status_value = int(state.get("status", 0))
         last_round = int(self.algod_client.status().get("last-round", 0))
         last_claim_round = int(state.get("last", 0))
@@ -58,14 +68,14 @@ class AlgorandService:
             else 0
         )
         claimable_amount = int(state.get("owed", 0)) + claimable_rounds * int(state.get("rate", 0))
-        account_info = self.algod_client.account_info(get_application_address(self.app_id))
+        account_info = self.algod_client.account_info(get_application_address(resolved_app_id))
         account_balance = int(account_info.get("amount", 0))
         min_balance = int(account_info.get("min-balance", 0))
         remaining_balance = max(account_balance - min_balance, 0)
 
         return {
-            "app_id": self.app_id,
-            "app_address": get_application_address(self.app_id),
+            "app_id": resolved_app_id,
+            "app_address": get_application_address(resolved_app_id),
             "sender": state.get("sender", ""),
             "receiver": state.get("receiver", ""),
             "rate": int(state.get("rate", 0)),
@@ -99,12 +109,12 @@ class AlgorandService:
     def _decode_args(self, txn):
         return [base64.b64decode(item) for item in txn.get("apaa", [])]
 
-    def _require_app_call(self, tx_id, expected_sender, action):
+    def _require_app_call(self, tx_id, app_id, expected_sender, action):
         info, txn = self._txn_body(tx_id)
         if txn.get("type") != "appl":
             raise ValueError("Transaction is not an application call.")
-        if int(txn.get("apid", 0)) != int(self.app_id):
-            raise ValueError("Transaction does not target the configured app.")
+        if int(txn.get("apid", 0)) != int(app_id):
+            raise ValueError("Transaction does not target the selected stream.")
         if txn.get("snd") != expected_sender:
             raise ValueError("Transaction sender does not match the connected wallet.")
 
@@ -114,8 +124,8 @@ class AlgorandService:
 
         return info, txn, args
 
-    def verify_create(self, tx_id, payment_tx_id, sender, receiver, rate, deposit):
-        _, _, args = self._require_app_call(tx_id, sender, "create")
+    def verify_create(self, app_id, tx_id, payment_tx_id, sender, receiver, rate, deposit):
+        _, _, args = self._require_app_call(tx_id, app_id, sender, "create")
         if len(args) != 3:
             raise ValueError("Create transaction arguments are invalid.")
         if encoding.encode_address(args[1]) != receiver:
@@ -128,17 +138,33 @@ class AlgorandService:
             raise ValueError("Funding transaction is not a payment.")
         if payment_txn.get("snd") != sender:
             raise ValueError("Funding transaction sender does not match the connected wallet.")
-        if payment_txn.get("rcv") != get_application_address(self.app_id):
+        if payment_txn.get("rcv") != get_application_address(int(app_id)):
             raise ValueError("Funding transaction does not pay the app account.")
         if int(payment_txn.get("amt", 0)) != int(deposit):
             raise ValueError("Funding transaction amount does not match the submitted deposit.")
 
-        return self.get_status()
+        return self.get_status(app_id)
 
-    def verify_sender_action(self, tx_id, sender, action):
-        self._require_app_call(tx_id, sender, action)
-        return self.get_status()
+    def verify_sender_action(self, app_id, tx_id, sender, action):
+        self._require_app_call(tx_id, app_id, sender, action)
+        return self.get_status(app_id)
 
-    def verify_claim(self, tx_id, receiver):
-        self._require_app_call(tx_id, receiver, "claim")
-        return self.get_status()
+    def verify_claim(self, app_id, tx_id, receiver):
+        self._require_app_call(tx_id, app_id, receiver, "claim")
+        return self.get_status(app_id)
+
+    def contract_spec(self):
+        if self._compiled_contract:
+            return self._compiled_contract
+
+        approval_source = (self.contract_dir / "approval.teal").read_text(encoding="utf-8")
+        clear_source = (self.contract_dir / "clear.teal").read_text(encoding="utf-8")
+
+        approval = self.algod_client.compile(approval_source)
+        clear = self.algod_client.compile(clear_source)
+
+        self._compiled_contract = {
+            "approval_program": approval["result"],
+            "clear_program": clear["result"],
+        }
+        return self._compiled_contract

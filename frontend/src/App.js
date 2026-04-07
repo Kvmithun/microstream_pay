@@ -3,7 +3,7 @@ import { PeraWalletConnect } from "@perawallet/connect";
 import algosdk from "algosdk";
 import "./App.css";
 import { apiRequest } from "./api";
-import { algodClient, APP_ID, appAddress } from "./algod";
+import { algodClient, getAppAddress } from "./algod";
 
 function createPeraWallet() {
   return new PeraWalletConnect({ chainId: 416002, shouldShowSignTxnToast: false });
@@ -54,6 +54,10 @@ function signerTxn(txn, signer) {
   return { txn, signers: [signer] };
 }
 
+function decodeBase64Program(program) {
+  return Uint8Array.from(atob(program), (char) => char.charCodeAt(0));
+}
+
 function App() {
   const [selectedRole, setSelectedRole] = useState("sender");
   const [mode, setMode] = useState("login");
@@ -69,6 +73,7 @@ function App() {
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedStreamId, setSelectedStreamId] = useState(null);
   const [senderForm, setSenderForm] = useState({
     receiver: "",
     rate: "10000",
@@ -102,20 +107,36 @@ function App() {
       return;
     }
 
-    const [status, streamData] = await Promise.all([
-      apiRequest("/chain-status"),
-      apiRequest(user.role === "sender" ? "/sender/my-streams" : "/receiver/my-streams"),
-    ]);
-    setChainStatus(status);
-    setStreams(streamData.streams || []);
+    const streamData = await apiRequest(user.role === "sender" ? "/sender/my-streams" : "/receiver/my-streams");
+    const nextStreams = streamData.streams || [];
+    const streamExists = nextStreams.some((stream) => String(stream.stream_id) === String(selectedStreamId));
+    const nextSelectedStreamId = streamExists
+      ? selectedStreamId
+      : (nextStreams[0]?.stream_id || null);
 
-    if (!senderForm.receiver && status.receiver) {
-      setSenderForm((current) => ({
-        ...current,
-        receiver: status.receiver || current.receiver,
-        rate: status.rate ? String(status.rate) : current.rate,
-      }));
-    }
+    setStreams(nextStreams);
+    setSelectedStreamId(nextSelectedStreamId);
+
+    const status = nextSelectedStreamId
+      ? await apiRequest(`/chain-status?app_id=${nextSelectedStreamId}`)
+      : {
+          app_id: null,
+          app_address: "",
+          sender: "",
+          receiver: "",
+          rate: 0,
+          remaining_balance: 0,
+          start_round: 0,
+          end_round: null,
+          last_claim_round: 0,
+          owed: 0,
+          status: "idle",
+          status_code: 0,
+          current_round: 0,
+          claimable_amount: 0,
+        };
+    setChainStatus(status);
+
   });
 
   useEffect(() => {
@@ -126,13 +147,22 @@ function App() {
     loadDashboard().catch((error) => {
       setErrorMessage(error.message);
     });
-  }, [user, loadDashboard]);
+  }, [user, selectedStreamId]);
 
   async function connectWallet() {
     try {
       setErrorMessage("");
       setStatusMessage("Opening Pera Wallet...");
-      const accounts = await peraWallet.connect();
+      let accounts = [];
+
+      if (accountAddress) {
+        accounts = [accountAddress];
+      } else if (peraWallet.isConnected) {
+        accounts = (await peraWallet.reconnectSession()) || [];
+      } else {
+        accounts = await peraWallet.connect();
+      }
+
       peraWallet.connector?.on("disconnect", handleWalletClosed);
       const wallet = accounts[0] || "";
       setAccountAddress(wallet);
@@ -204,8 +234,17 @@ function App() {
         accountAddress
       );
       const submitResponse = await algodClient.sendRawTransaction(signedTransactions).do();
-      const networkTxId = submitResponse.txId || submitResponse.txid || waitForTxId;
-      await algosdk.waitForConfirmation(algodClient, waitForTxId || networkTxId, 4);
+      const networkTxId =
+        submitResponse.txId ||
+        submitResponse.txid ||
+        submitResponse.txID ||
+        waitForTxId;
+
+      if (!networkTxId) {
+        throw new Error("Unable to determine the submitted transaction id.");
+      }
+
+      await algosdk.waitForConfirmation(algodClient, networkTxId, 12);
 
       const response = await apiRequest(syncPath, {
         method: "POST",
@@ -224,23 +263,66 @@ function App() {
 
   async function handleCreateStream() {
     try {
+      const contractSpec = await apiRequest("/contract-spec");
       const params = await algodClient.getTransactionParams().do();
       const deposit = Math.round(Number(senderForm.deposit) * 1_000_000);
       const rate = Number(senderForm.rate);
       const receiver = senderForm.receiver.trim();
+      const approvalProgram = decodeBase64Program(contractSpec.approval_program);
+      const clearProgram = decodeBase64Program(contractSpec.clear_program);
 
+      const createAppTxn = algosdk.makeApplicationCreateTxnFromObject({
+        sender: accountAddress,
+        approvalProgram,
+        clearProgram,
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+        numLocalInts: 0,
+        numLocalByteSlices: 0,
+        numGlobalInts: 6,
+        numGlobalByteSlices: 2,
+        suggestedParams: params,
+      });
+
+      const signedCreateTxn = await peraWallet.signTransaction(
+        [[signerTxn(createAppTxn, accountAddress)]],
+        accountAddress
+      );
+      const createAppResponse = await algodClient.sendRawTransaction(signedCreateTxn).do();
+      const createAppTxId =
+        createAppResponse.txId ||
+        createAppResponse.txid ||
+        createAppResponse.txID ||
+        createAppTxn.txID().toString();
+
+      if (!createAppTxId) {
+        throw new Error("Unable to determine the new app creation transaction id.");
+      }
+
+      const createAppResult = await algosdk.waitForConfirmation(algodClient, createAppTxId, 12);
+      const newAppId = Number(
+        createAppResult.applicationIndex ||
+        createAppResult["application-index"] ||
+        0
+      );
+
+      if (!newAppId) {
+        throw new Error("Unable to create a new stream app.");
+      }
+
+      const appAddress = getAppAddress(newAppId);
+      const actionParams = await algodClient.getTransactionParams().do();
       const paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
         sender: accountAddress,
         receiver: appAddress,
         amount: deposit,
-        suggestedParams: params,
+        suggestedParams: actionParams,
       });
 
       const appCallTxn = algosdk.makeApplicationNoOpTxnFromObject({
         sender: accountAddress,
-        appIndex: APP_ID,
+        appIndex: Number(newAppId),
         appArgs: [textEncoder.encode("create"), algosdk.decodeAddress(receiver).publicKey, algosdk.encodeUint64(rate)],
-        suggestedParams: params,
+        suggestedParams: actionParams,
       });
 
       algosdk.assignGroupID([paymentTxn, appCallTxn]);
@@ -251,6 +333,7 @@ function App() {
         waitForTxId: paymentTxn.txID().toString(),
         syncPath: "/sender/create-stream",
         syncBody: {
+          app_id: Number(newAppId),
           tx_id: appCallTxn.txID().toString(),
           payment_tx_id: paymentTxn.txID().toString(),
           receiver,
@@ -258,6 +341,7 @@ function App() {
           deposit,
         },
       });
+      setSelectedStreamId(String(newAppId));
     } catch (error) {
       setErrorMessage(error?.message || "Unable to create stream.");
       setStatusMessage("");
@@ -273,7 +357,7 @@ function App() {
 
       const txn = algosdk.makeApplicationNoOpTxnFromObject({
         sender: accountAddress,
-        appIndex: APP_ID,
+        appIndex: Number(selectedStreamId),
         appArgs: [textEncoder.encode("claim")],
         accounts: [accountAddress],
         suggestedParams: params,
@@ -284,7 +368,7 @@ function App() {
         transactions: [txn],
         waitForTxId: txn.txID().toString(),
         syncPath: "/receiver/claim",
-        syncBody: { tx_id: txn.txID().toString() },
+        syncBody: { app_id: Number(selectedStreamId), tx_id: txn.txID().toString() },
       });
     } catch (error) {
       setErrorMessage(error?.message || "Unable to claim funds.");
@@ -298,7 +382,7 @@ function App() {
       const params = await algodClient.getTransactionParams().do();
       const txn = algosdk.makeApplicationNoOpTxnFromObject({
         sender: accountAddress,
-        appIndex: APP_ID,
+        appIndex: Number(selectedStreamId),
         appArgs: [textEncoder.encode(action)],
         suggestedParams: params,
       });
@@ -308,7 +392,7 @@ function App() {
         transactions: [txn],
         waitForTxId: txn.txID().toString(),
         syncPath: `/sender/${action}-stream`,
-        syncBody: { tx_id: txn.txID().toString() },
+        syncBody: { app_id: Number(selectedStreamId), tx_id: txn.txID().toString() },
       });
     } catch (error) {
       setErrorMessage(error?.message || `Unable to ${action} stream.`);
@@ -340,7 +424,7 @@ function App() {
 
   const walletMatchesUser = user && accountAddress && user.wallet_address === accountAddress;
   const isSender = user?.role === "sender";
-  const currentStream = streams.find((stream) => String(stream.stream_id) === String(chainStatus?.app_id)) || null;
+  const currentStream = streams.find((stream) => String(stream.stream_id) === String(selectedStreamId)) || null;
   const remainingBalance = currentStream?.remaining_balance ?? chainStatus?.remaining_balance ?? 0;
   const totalDeposit = currentStream?.total_deposit ?? 0;
   const totalClaimed = currentStream?.claimed_amount ?? Math.max(totalDeposit - remainingBalance, 0);
@@ -349,7 +433,7 @@ function App() {
   const isActive = statusCode === 1;
   const isPaused = statusCode === 2;
   const isStopped = statusCode === 3;
-  const canStartStream = isIdle || (isStopped && Number(chainStatus?.owed || 0) === 0);
+  const canStartStream = true;
 
   function switchRole(role) {
     setSelectedRole(role);
@@ -525,7 +609,8 @@ function App() {
             <div><dt>Email</dt><dd>{user.email}</dd></div>
             <div><dt>Stored Wallet</dt><dd>{user.wallet_address}</dd></div>
             <div><dt>Connected Wallet</dt><dd>{accountAddress || "Not connected"}</dd></div>
-            <div><dt>App ID</dt><dd>{chainStatus?.app_id || "-"}</dd></div>
+            <div><dt>Stream ID</dt><dd>{chainStatus?.app_id || "-"}</dd></div>
+            <div><dt>App Address</dt><dd>{chainStatus?.app_address || "-"}</dd></div>
             <div><dt>Sender</dt><dd>{chainStatus?.sender || "-"}</dd></div>
             <div><dt>Receiver</dt><dd>{chainStatus?.receiver || "-"}</dd></div>
             <div><dt>Rate</dt><dd>{chainStatus?.rate || 0} microAlgos / round</dd></div>
@@ -549,26 +634,63 @@ function App() {
             <>
               <label className="field">
                 <span>Receiver Address</span>
-                <input value={senderForm.receiver} onChange={(event) => setSenderForm({ ...senderForm, receiver: event.target.value })} />
+                <input
+                  value={senderForm.receiver}
+                  onChange={(event) => {
+                    setSenderForm({ ...senderForm, receiver: event.target.value });
+                  }}
+                />
               </label>
               <label className="field">
                 <span>Rate (microAlgos / round)</span>
-                <input value={senderForm.rate} onChange={(event) => setSenderForm({ ...senderForm, rate: event.target.value })} />
+                <input
+                  value={senderForm.rate}
+                  onChange={(event) => {
+                    setSenderForm({ ...senderForm, rate: event.target.value });
+                  }}
+                />
               </label>
               <label className="field">
                 <span>Deposit (ALGO)</span>
-                <input value={senderForm.deposit} onChange={(event) => setSenderForm({ ...senderForm, deposit: event.target.value })} />
+                <input
+                  value={senderForm.deposit}
+                  onChange={(event) => {
+                    setSenderForm({ ...senderForm, deposit: event.target.value });
+                  }}
+                />
               </label>
+              <div className="hero-actions">
+                <button
+                  type="button"
+                  className="button ghost"
+                  onClick={() => setSenderForm({ receiver: "", rate: "10000", deposit: "3" })}
+                >
+                  Clear Form
+                </button>
+                <button
+                  type="button"
+                  className="button ghost"
+                  onClick={() =>
+                    setSenderForm({
+                      receiver: chainStatus?.receiver || "",
+                      rate: chainStatus?.rate ? String(chainStatus.rate) : "10000",
+                      deposit: senderForm.deposit,
+                    })
+                  }
+                >
+                  Copy Selected Stream
+                </button>
+              </div>
               <div className="notes">
                 <p>Stopping a stream only freezes accrual. It does not pay the receiver or refund the sender.</p>
                 <p>Any remaining funds stay locked in the contract until the receiver claims them.</p>
-                {!canStartStream ? <p>A new stream can start only when the app is idle, or after a stopped stream has been fully claimed. Current status: {chainStatus?.status || "unknown"}.</p> : null}
+                <p>Each new start creates a brand new isolated stream app, so one sender's stream will not block another sender.</p>
               </div>
               <div className="action-grid">
                 <button className="button primary" disabled={!walletMatchesUser || isSubmitting || !canStartStream} onClick={handleCreateStream}>Start Stream</button>
-                <button className="button secondary" disabled={!walletMatchesUser || isSubmitting || !isActive} onClick={handlePause}>Pause</button>
-                <button className="button secondary" disabled={!walletMatchesUser || isSubmitting || !isPaused} onClick={handleResume}>Resume</button>
-                <button className="button danger" disabled={!walletMatchesUser || isSubmitting || (!isActive && !isPaused)} onClick={handleStop}>Stop</button>
+                <button className="button secondary" disabled={!walletMatchesUser || isSubmitting || !selectedStreamId || !isActive} onClick={handlePause}>Pause</button>
+                <button className="button secondary" disabled={!walletMatchesUser || isSubmitting || !selectedStreamId || !isPaused} onClick={handleResume}>Resume</button>
+                <button className="button danger" disabled={!walletMatchesUser || isSubmitting || !selectedStreamId || (!isActive && !isPaused)} onClick={handleStop}>Stop</button>
               </div>
             </>
           ) : (
@@ -578,7 +700,7 @@ function App() {
                 <p>Stopped streams do not auto-settle. Claim is still required to withdraw earned funds.</p>
               </div>
               <div className="action-grid">
-                <button className="button primary" disabled={!walletMatchesUser || isSubmitting || !(chainStatus?.claimable_amount > 0)} onClick={handleClaim}>Claim Funds</button>
+                <button className="button primary" disabled={!walletMatchesUser || isSubmitting || !selectedStreamId || !(chainStatus?.claimable_amount > 0)} onClick={handleClaim}>Claim Funds</button>
               </div>
             </>
           )}
@@ -597,14 +719,19 @@ function App() {
           <h2>{isSender ? "Streams You Created" : "Streams Assigned To You"}</h2>
           <div className="stream-list">
             {streams.length ? streams.map((stream) => (
-              <div className="stream-row" key={stream._id || stream.stream_id}>
+              <button
+                type="button"
+                className="stream-row"
+                key={stream._id || stream.stream_id}
+                onClick={() => setSelectedStreamId(String(stream.stream_id))}
+              >
                 <strong>{stream.stream_id}</strong>
                 <span>{stream.status}</span>
                 <span>{formatAlgo(stream.total_deposit)}</span>
                 <span>{formatAlgo(stream.remaining_balance)}</span>
                 <span>{formatAlgo(stream.claimed_amount)}</span>
                 <span>{String(stream.stream_id) === String(chainStatus?.app_id) ? formatAlgo(chainStatus?.claimable_amount || 0) : formatAlgo(0)}</span>
-              </div>
+              </button>
             )) : <p className="empty-state">No streams in MongoDB yet.</p>}
           </div>
           <div className="notes">

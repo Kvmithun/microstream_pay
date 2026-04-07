@@ -38,11 +38,18 @@ def create_app():
 
     @app.get("/health")
     def health():
-        return jsonify({"status": "ok", "app_id": app.config["APP_ID"]})
+        return jsonify({"status": "ok", "default_app_id": app.config["APP_ID"]})
 
     @app.get("/chain-status")
     def chain_status():
-        return jsonify(app.algorand_service.get_status())
+        app_id = request.args.get("app_id", type=int)
+        if not app_id:
+            return jsonify({"status": "idle", "status_code": 0, "app_id": None, "claimable_amount": 0, "remaining_balance": 0})
+        return jsonify(app.algorand_service.get_status(app_id))
+
+    @app.get("/contract-spec")
+    def contract_spec():
+        return jsonify(app.algorand_service.contract_spec())
 
     @app.before_request
     def handle_preflight():

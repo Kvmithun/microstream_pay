@@ -306,11 +306,24 @@
 }
 
 .stream-row {
+  width: 100%;
   display: grid;
-  grid-template-columns: 1.5fr 0.8fr 0.8fr;
+  grid-template-columns: 1.5fr repeat(5, 0.8fr);
   gap: 12px;
   padding: 14px 0;
   border-bottom: 1px solid rgba(167, 212, 255, 0.08);
+  background: transparent;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.stream-row:hover {
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .empty-state {

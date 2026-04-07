@@ -38,16 +38,18 @@ def my_streams():
 @require_role("sender")
 def create_stream():
     data = request.get_json(force=True)
+    app_id = data.get("app_id")
     tx_id = data.get("tx_id")
     payment_tx_id = data.get("payment_tx_id")
     receiver = data.get("receiver")
     rate = data.get("rate")
     deposit = data.get("deposit")
 
-    if not tx_id or not payment_tx_id or not receiver or not rate or not deposit:
-        return jsonify({"error": "tx_id, payment_tx_id, receiver, rate, and deposit are required"}), 400
+    if not app_id or not tx_id or not payment_tx_id or not receiver or not rate or not deposit:
+        return jsonify({"error": "app_id, tx_id, payment_tx_id, receiver, rate, and deposit are required"}), 400
 
     status = current_app.algorand_service.verify_create(
+        app_id,
         tx_id,
         payment_tx_id,
         g.current_user["wallet_address"],
@@ -71,12 +73,14 @@ def create_stream():
 
 def _sender_action(action):
     data = request.get_json(force=True) if request.data else {}
+    app_id = data.get("app_id")
     tx_id = data.get("tx_id")
-    if not tx_id:
-        return jsonify({"error": "tx_id is required"}), 400
+    if not app_id or not tx_id:
+        return jsonify({"error": "app_id and tx_id are required"}), 400
 
-    existing = current_app.stream_model.find_by_stream_id(str(current_app.algorand_service.app_id))
+    existing = current_app.stream_model.find_by_stream_id(str(app_id))
     status = current_app.algorand_service.verify_sender_action(
+        app_id,
         tx_id,
         g.current_user["wallet_address"],
         action,
