@@ -1,0 +1,8 @@
+pyteal
+py-algorand-sdk
+python-dotenv
+Flask
+Flask-Cors
+PyJWT
+pymongo
+certifi
