@@ -17,13 +17,15 @@ const RECEIVER_ACCOUNT = {
   wallet_address: "AL3JJ527I262UMN6BKSZM2B3PKYM2LHILXFE4EXBZXYJDGYC2VBBEIA3TY",
 };
 
+const WHATSAPP_BATMAN_IMAGE = "/images/batman_featured.jpeg";
+
 const MOVIES = [
   {
     id: "game-thrones",
     title: "Game of Thrones",
     subtitle: "Intro sequence",
     src: "/videos/game_thrones_intro.mp4",
-    poster: "/images/got_image.jpeg",
+    poster: "/images/got_poster_alt.jpg",
     lengthLabel: "Intro",
     genre: "Fantasy",
     rating: "U/A 16+",
@@ -64,11 +66,65 @@ const MOVIES = [
   },
 ];
 
+const LANDING_HERO = {
+  poster: WHATSAPP_BATMAN_IMAGE,
+  eyebrow: "OTT Streaming Powered By Algorand",
+  title: "Premium local cinema with prepaid micropayments.",
+  description:
+    "Add funds once, watch premium clips smoothly, and let MicroStream handle real-time usage billing with escrow-backed creator payouts.",
+};
+
 const NAV_ITEMS = [
   { id: "home", label: "Home" },
   { id: "explore", label: "Explore" },
   { id: "watchlist", label: "Watchlist" },
   { id: "profile", label: "Profile" },
+];
+
+const LANDING_FEATURES = [
+  {
+    title: "Recharge Before You Stream",
+    body: "Top up once with Pera Wallet, then watch premium local clips with uninterrupted prepaid playback.",
+  },
+  {
+    title: "Micropayments In Real Time",
+    body: "Usage is billed smoothly in the background, so every second watched maps to transparent platform accounting.",
+  },
+  {
+    title: "Escrow-Secured Revenue",
+    body: "Viewer funds move into Algorand escrow first, and creator earnings are released later through the claim flow.",
+  },
+  {
+    title: "Continuous OTT Sessions",
+    body: "Switch between titles without resetting the same viewing session, payment progress, or platform revenue stats.",
+  },
+];
+
+const LANDING_FAQS = [
+  {
+    question: "What is MicroStream Pay?",
+    answer: "MicroStream Pay is a premium OTT demo that combines local video playback with Algorand-backed prepaid micropayments.",
+  },
+  {
+    question: "How does pricing work?",
+    answer: "Viewers add funds first and playback deducts 0.00001 ALGO per second while premium content is playing.",
+  },
+  {
+    question: "Do I need a wallet to watch?",
+    answer: "Yes. Pera Wallet is used to fund your OTT balance so you can start viewing paid content.",
+  },
+  {
+    question: "Where does the money go?",
+    answer: "Viewer deposits go to escrow first. Creator earnings are claimed later from the smart-contract flow instead of receiving direct payment instantly.",
+  },
+  {
+    question: "Can I switch titles mid-session?",
+    answer: "Yes. MicroStream keeps the same running watch session and spending totals when you move between supported clips.",
+  },
+  {
+    question: "Who uses the creator portal?",
+    answer: "The creator portal is a fixed receiver dashboard used only to review platform revenue and claim accumulated earnings.",
+  },
 ];
 
 const defaultSignup = {
@@ -153,6 +209,7 @@ function App() {
   const [authMode, setAuthMode] = useState("login");
   const [signupForm, setSignupForm] = useState(defaultSignup);
   const [loginForm, setLoginForm] = useState(defaultLogin);
+  const [catalog] = useState(() => MOVIES);
   const [depositAmount, setDepositAmount] = useState("1");
   const [manualDepositTxId, setManualDepositTxId] = useState("");
   const [accountAddress, setAccountAddress] = useState("");
@@ -174,14 +231,16 @@ function App() {
   const [claimResult, setClaimResult] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState("home");
-  const [watchlistIds, setWatchlistIds] = useState([MOVIES[1].id, MOVIES[3].id]);
+  const [watchlistIds, setWatchlistIds] = useState([]);
   const [exploreFilter, setExploreFilter] = useState("All");
+  const [expandedFaq, setExpandedFaq] = useState(LANDING_FAQS[0].question);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
-  const selectedMovie = MOVIES.find((movie) => movie.id === selectedMovieId) || MOVIES[0];
+  const selectedMovie = catalog.find((movie) => movie.id === selectedMovieId) || catalog[0];
   const isViewer = user?.role === "user";
   const walletMatchesUser = Boolean(user && accountAddress && user.wallet_address === accountAddress);
-  const watchlistMovies = MOVIES.filter((movie) => watchlistIds.includes(movie.id));
-  const exploreMovies = exploreFilter === "All" ? MOVIES : MOVIES.filter((movie) => movie.genre === exploreFilter);
+  const watchlistMovies = catalog.filter((movie) => watchlistIds.includes(movie.id));
+  const exploreMovies = exploreFilter === "All" ? catalog : catalog.filter((movie) => movie.genre === exploreFilter);
 
   useEffect(() => {
     isViewerRef.current = isViewer;
@@ -617,6 +676,13 @@ function App() {
     }
   }
 
+  function handleLandingTrendingClick(movieId) {
+    setSelectedMovieId(movieId);
+    setPortalMode("viewer");
+    setAuthMode("login");
+    setAuthModalOpen(true);
+  }
+
   function toggleWatchlist(movieId) {
     setWatchlistIds((current) => (
       current.includes(movieId) ? current.filter((id) => id !== movieId) : [...current, movieId]
@@ -644,13 +710,19 @@ function App() {
 
   const statusLabel = playbackState.charAt(0).toUpperCase() + playbackState.slice(1);
   const contentRows = [
-    { title: "Trending Now", items: MOVIES },
-    { title: "Featured", items: [...MOVIES].reverse() },
-    { title: "Continue Watching", items: MOVIES.slice(1).concat(MOVIES[0]) },
-    { title: "New Releases", items: MOVIES.slice(2).concat(MOVIES.slice(0, 2)) },
+    { title: "Trending Now", items: catalog },
+    { title: "Featured", items: [...catalog].reverse() },
+    {
+      title: "Continue Watching",
+      items: totalWatchedSeconds > 0
+        ? [selectedMovie, ...catalog.filter((movie) => movie.id !== selectedMovie.id)].slice(0, catalog.length)
+        : catalog,
+    },
+    { title: "New Releases", items: [...catalog.slice(2), ...catalog.slice(0, 2)] },
   ];
   const highlightedRow = contentRows[0];
-  const genreFilters = ["All", ...new Set(MOVIES.map((movie) => movie.genre))];
+  const watchlistPreview = watchlistMovies.slice(0, 4);
+  const genreFilters = ["All", ...new Set(catalog.map((movie) => movie.genre))];
   const activeNavLabel = NAV_ITEMS.find((item) => item.id === currentPage)?.label || "Home";
 
   const viewerPageContent = {
@@ -774,13 +846,18 @@ function App() {
               </button>
               <button type="button" className="button ghost button-inline" onClick={() => toggleWatchlist(movie.id)}>Remove</button>
             </div>
-          )) : <p className="empty-state">Your watchlist is empty. Add titles from Home or Explore.</p>}
+          )) : (
+            <div className="empty-state empty-state-rich">
+              <p>Your watchlist is empty.</p>
+              <button type="button" className="button secondary" onClick={() => setCurrentPage("explore")}>Browse Movies</button>
+            </div>
+          )}
         </div>
       </article>
     ),
     profile: (
-      <section className="profile-grid">
-        <article className="panel glass-panel">
+      <section className="profile-stack">
+        <article className="panel glass-panel profile-section-card">
           <p className="eyebrow">Profile</p>
           <h2>Account Dashboard</h2>
           <div className="profile-hero">
@@ -797,7 +874,7 @@ function App() {
             <div><dt>Total Spent</dt><dd>{formatAlgoFromMicro(totalSpentMicroalgos)}</dd></div>
           </dl>
         </article>
-        <article className="panel glass-panel">
+        <article className="panel glass-panel profile-section-card profile-balance-card">
           <p className="eyebrow">Wallet</p>
           <h2>Payments & Balance</h2>
           <div className="profile-metrics">
@@ -815,7 +892,7 @@ function App() {
             </div>
           </div>
         </article>
-        <article className="panel glass-panel">
+        <article className="panel glass-panel profile-section-card">
           <p className="eyebrow">Subscription</p>
           <h2>Plan Details</h2>
           <div className="notes">
@@ -823,16 +900,6 @@ function App() {
             <p>Billing Model: Prepaid balance deduction</p>
             <p>Rate: 0.00001 ALGO / second</p>
             <p>Access: All local clips and live wallet recharge</p>
-          </div>
-        </article>
-        <article className="panel glass-panel">
-          <p className="eyebrow">Streaming Stats</p>
-          <h2>Usage Snapshot</h2>
-          <div className="notes">
-            <p>Platform Revenue: {formatAlgoFromMicro(globalStats?.total_spent_all_users || 0)}</p>
-            <p>Total Claimed: {formatAlgoFromMicro(globalStats?.total_claimed || 0)}</p>
-            <p>Remaining In System: {formatAlgoFromMicro(globalStats?.total_remaining || 0)}</p>
-            <p>Users Active: {String(globalStats?.active_users || 0)}</p>
           </div>
         </article>
       </section>
@@ -843,138 +910,269 @@ function App() {
     const isCreatorPortal = portalMode === "creator";
     return (
       <main className="app-shell premium-shell auth-screen">
-        <section className="hero-banner auth-hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(4, 10, 24, 0.92) 10%, rgba(4, 10, 24, 0.68) 42%, rgba(4, 10, 24, 0.82) 100%), url(${selectedMovie.poster})` }}>
-          <div className="hero-banner__content">
-            <p className="eyebrow">Algorand Premium OTT</p>
-            <div className="hero-meta">
-              <span className="hero-chip">4K Atmos</span>
-              <span className="hero-chip">Micropayments Live</span>
-              <span className="hero-chip">Secure Wallet Flow</span>
+        <section className="netflix-shell">
+          <header className="netflix-topbar">
+            <div className="netflix-brand">
+              <img className="netflix-logo-image" src={WHATSAPP_BATMAN_IMAGE} alt="MicroStream logo" />
+              <div className="netflix-brand-copy">
+                <span className="netflix-logo">MicroStream</span>
+                <span className="netflix-tag">OTT + Algorand Micropayments</span>
+              </div>
             </div>
-            <h1>{isCreatorPortal ? "Creator Claim Suite" : "Cinematic Streaming, Paid By The Second"}</h1>
-            <p className="hero-copy">
-              {isCreatorPortal
-                ? "A private earnings console for the fixed receiver account. Review revenue, track claims, and reconcile payouts from the escrow layer."
-                : "A premium OTT experience where viewers top up once, then watch local content with smooth live deduction, cinematic UI, and real Algorand-backed accounting."}
-            </p>
+            <div className="netflix-top-actions">
+              <button type="button" className="netflix-language">English</button>
+              <button
+                type="button"
+                className="netflix-signin"
+                onClick={() => {
+                  setPortalMode("viewer");
+                  setAuthMode("login");
+                  setAuthModalOpen(true);
+                }}
+              >
+                Sign In
+              </button>
+            </div>
+          </header>
 
-            <div className="hero-actions">
-              <button className={`button ${portalMode === "viewer" ? "primary" : "ghost"}`} onClick={() => setPortalMode("viewer")}>
+          <section className="netflix-hero" style={{ backgroundImage: `linear-gradient(180deg, rgba(7, 8, 13, 0.22), rgba(7, 8, 13, 0.84) 72%, rgba(7, 8, 13, 0.98) 100%), url(${LANDING_HERO.poster})` }}>
+            <div className="netflix-hero-overlay" />
+            <div className="netflix-hero-content">
+              <p className="eyebrow">{LANDING_HERO.eyebrow}</p>
+              <h1>{LANDING_HERO.title}</h1>
+              <p className="netflix-subcopy">
+                {LANDING_HERO.description}
+              </p>
+              <p className="netflix-cta-copy">
+                Ready to stream? Choose viewer access or creator claim and continue into the platform.
+              </p>
+              <div className="netflix-hero-actions">
+                <button
+                  type="button"
+                  className="netflix-cta-button"
+                  onClick={() => {
+                    setPortalMode("viewer");
+                    setAuthMode("signup");
+                    setAuthModalOpen(true);
+                  }}
+                >
+                  Get Started
+                </button>
+                <button
+                  type="button"
+                  className="netflix-secondary-button"
+                  onClick={() => {
+                    setPortalMode("creator");
+                    setAuthMode("login");
+                    setAuthModalOpen(true);
+                  }}
+                >
+                  Creator Claim
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section className="netflix-trending">
+            <div className="netflix-section-header">
+              <h2>Trending Now</h2>
+            </div>
+            <div className="netflix-trending-row">
+              {MOVIES.map((movie, index) => (
+                <button
+                  key={`trend-${movie.id}`}
+                  type="button"
+                  className="netflix-rank-card"
+                  onClick={() => handleLandingTrendingClick(movie.id)}
+                  style={{ backgroundImage: `linear-gradient(180deg, rgba(5, 8, 16, 0.08), rgba(5, 8, 16, 0.78)), url(${movie.poster})` }}
+                >
+                  <span className="netflix-rank-number">{index + 1}</span>
+                  <div className="netflix-rank-meta">
+                    <strong>{movie.title}</strong>
+                    <span>{movie.genre}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="netflix-reasons">
+            <div className="netflix-section-header">
+              <h2>Why MicroStream Feels Different</h2>
+            </div>
+            <div className="netflix-reasons-grid">
+              {LANDING_FEATURES.map((feature) => (
+                <article key={feature.title} className="netflix-reason-card">
+                  <strong>{feature.title}</strong>
+                  <p>{feature.body}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="netflix-faq">
+            <div className="netflix-section-header">
+              <h2>Frequently Asked Questions</h2>
+            </div>
+            <div className="netflix-faq-list">
+              {LANDING_FAQS.map((item) => {
+                const isOpen = expandedFaq === item.question;
+                return (
+                  <article key={item.question} className={`netflix-faq-item ${isOpen ? "netflix-faq-item-open" : ""}`}>
+                    <button type="button" className="netflix-faq-trigger" onClick={() => setExpandedFaq(isOpen ? "" : item.question)}>
+                      <span>{item.question}</span>
+                      <span>{isOpen ? "−" : "+"}</span>
+                    </button>
+                    {isOpen ? <div className="netflix-faq-answer"><p>{item.answer}</p></div> : null}
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="netflix-membership" id="membership">
+            <p className="netflix-membership-copy">
+              Ready to watch? Create your MicroStream account or sign in to continue your prepaid OTT session.
+            </p>
+            <div className="netflix-membership-actions">
+              <button
+                type="button"
+                className={`button ${portalMode === "viewer" ? "primary" : "ghost"}`}
+                onClick={() => {
+                  setPortalMode("viewer");
+                  setAuthMode("signup");
+                  setAuthModalOpen(true);
+                }}
+              >
                 Viewer Portal
               </button>
-              <button className={`button ${portalMode === "creator" ? "primary" : "ghost"}`} onClick={() => setPortalMode("creator")}>
+              <button
+                type="button"
+                className={`button ${portalMode === "creator" ? "primary" : "ghost"}`}
+                onClick={() => {
+                  setPortalMode("creator");
+                  setAuthMode("login");
+                  setAuthModalOpen(true);
+                }}
+              >
                 Creator Claim
               </button>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section className="auth-layout">
-          <article className="panel auth-panel glass-panel">
-            <p className="eyebrow">{isCreatorPortal ? "Creator Access" : "Viewer Access"}</p>
-            <h2>{isCreatorPortal ? "Receiver Login" : authMode === "signup" ? "Create User Account" : "User Login"}</h2>
-
-            {isCreatorPortal ? (
-              <form className="form-stack" onSubmit={handleLogin}>
-                <label className="field">
-                  <span>Email</span>
-                  <input value={loginForm.email} onChange={(event) => setLoginForm({ ...loginForm, email: event.target.value })} />
-                </label>
-                <label className="field">
-                  <span>Password</span>
-                  <input type="password" value={loginForm.password} onChange={(event) => setLoginForm({ ...loginForm, password: event.target.value })} />
-                </label>
-                <button type="submit" className="button primary" disabled={isSubmitting}>Login</button>
-              </form>
-            ) : authMode === "signup" ? (
-              <form className="form-stack" onSubmit={handleSignup}>
-                <label className="field">
-                  <span>Name</span>
-                  <input value={signupForm.name} onChange={(event) => setSignupForm({ ...signupForm, name: event.target.value })} />
-                </label>
-                <label className="field">
-                  <span>Email</span>
-                  <input value={signupForm.email} onChange={(event) => setSignupForm({ ...signupForm, email: event.target.value })} />
-                </label>
-                <label className="field">
-                  <span>Password</span>
-                  <input type="password" value={signupForm.password} onChange={(event) => setSignupForm({ ...signupForm, password: event.target.value })} />
-                </label>
-                <label className="field">
-                  <span>Wallet Address</span>
-                  <input value={signupForm.wallet_address} onChange={(event) => setSignupForm({ ...signupForm, wallet_address: event.target.value })} />
-                </label>
-                <div className="hero-actions">
-                  <button type="button" className="button secondary" onClick={connectWallet}>Connect Pera Wallet</button>
-                  <button type="submit" className="button primary" disabled={isSubmitting}>Create Account</button>
-                </div>
-                <p className="auth-switch">
-                  Already have an account?{" "}
-                  <button type="button" className="text-button" onClick={() => setAuthMode("login")}>Login</button>
-                </p>
-              </form>
-            ) : (
-              <form className="form-stack" onSubmit={handleLogin}>
-                <label className="field">
-                  <span>Email</span>
-                  <input value={loginForm.email} onChange={(event) => setLoginForm({ ...loginForm, email: event.target.value })} />
-                </label>
-                <label className="field">
-                  <span>Password</span>
-                  <input type="password" value={loginForm.password} onChange={(event) => setLoginForm({ ...loginForm, password: event.target.value })} />
-                </label>
-                <button type="submit" className="button primary" disabled={isSubmitting}>Login</button>
-                <p className="auth-switch">
-                  Don&apos;t have an account?{" "}
-                  <button type="button" className="text-button" onClick={() => setAuthMode("signup")}>Sign Up</button>
-                </p>
-              </form>
-            )}
-
-            {(statusMessage || errorMessage) ? (
-              <div className={`status-box ${errorMessage ? "status-error" : "status-success"}`}>
-                <p>{errorMessage || statusMessage}</p>
-              </div>
-            ) : null}
-          </article>
-
-          <article className="panel auth-side glass-panel">
-            <p className="eyebrow">{isCreatorPortal ? "Earnings Console" : "Playback Rules"}</p>
-            <h2>{isCreatorPortal ? "Receiver Access" : "Recharge Then Watch"}</h2>
-            <div className="feature-stack">
-              {isCreatorPortal ? (
-                <>
-                  <div className="feature-card">
-                    <strong>Manual Receiver Login</strong>
-                    <span>No signup. The creator uses one fixed protected account.</span>
-                  </div>
-                  <div className="feature-card">
-                    <strong>Claim Only</strong>
-                    <span>The claim dashboard is isolated from all viewer playback features.</span>
-                  </div>
-                  <div className="feature-card">
-                    <strong>Backend-Controlled Wallet</strong>
-                    <span>The receiver address is controlled by the platform, not by frontend inputs.</span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="feature-card">
-                    <strong>Add Funds First</strong>
-                    <span>Top up your OTT wallet through Pera before watching premium clips.</span>
-                  </div>
-                  <div className="feature-card">
-                    <strong>Pay As You Watch</strong>
-                    <span>Playback deducts 0.00001 ALGO per second from your in-app balance.</span>
-                  </div>
-                  <div className="feature-card">
-                    <strong>Continuous Session</strong>
-                    <span>Switching videos preserves the same total watch time and spend.</span>
-                  </div>
-                </>
-              )}
+          <footer className="netflix-footer">
+            <p>Questions? Contact the MicroStream demo desk.</p>
+            <div className="netflix-footer-links">
+              <a href="#membership">Account</a>
+              <a href="#membership">Help Centre</a>
+              <a href="#membership">Ways to Watch</a>
+              <a href="#membership">Privacy</a>
+              <a href="#membership">Contact</a>
+              <a href="#membership">Creator Claim</a>
             </div>
-          </article>
+            <span className="netflix-footer-brand">MicroStream OTT India</span>
+          </footer>
+
+          {authModalOpen ? (
+            <div className="auth-modal-backdrop" onClick={() => setAuthModalOpen(false)}>
+              <section className={`auth-modal glass-panel ${authMode === "signup" ? "auth-modal-signup" : "auth-modal-login"}`} onClick={(event) => event.stopPropagation()}>
+                <div className="auth-modal-header">
+                  <div>
+                    <p className="eyebrow">{isCreatorPortal ? "Creator Access" : "Member Access"}</p>
+                    <h2>{isCreatorPortal ? "Creator Sign In" : authMode === "signup" ? "Create Your Account" : "Welcome Back"}</h2>
+                  </div>
+                  <button type="button" className="modal-close" onClick={() => setAuthModalOpen(false)}>×</button>
+                </div>
+
+                {!isCreatorPortal ? (
+                  <div className="auth-modal-switch">
+                    <button
+                      type="button"
+                      className={`auth-switch-chip ${portalMode === "viewer" ? "auth-switch-chip-active" : ""}`}
+                      onClick={() => setPortalMode("viewer")}
+                    >
+                      Viewer
+                    </button>
+                    <button
+                      type="button"
+                      className={`auth-switch-chip ${portalMode === "creator" ? "auth-switch-chip-active" : ""}`}
+                      onClick={() => {
+                        setPortalMode("creator");
+                        setAuthMode("login");
+                      }}
+                    >
+                      Creator
+                    </button>
+                  </div>
+                ) : null}
+
+                <div key={`${portalMode}-${authMode}`} className="auth-modal-body">
+                  {isCreatorPortal ? (
+                    <form className="form-stack" autoComplete="off" onSubmit={handleLogin}>
+                      <label className="field">
+                        <span>Email</span>
+                        <input autoComplete="off" placeholder="Enter your email" value={loginForm.email} onChange={(event) => setLoginForm({ ...loginForm, email: event.target.value })} />
+                      </label>
+                      <label className="field">
+                        <span>Password</span>
+                        <input autoComplete="new-password" placeholder="Enter your password" type="password" value={loginForm.password} onChange={(event) => setLoginForm({ ...loginForm, password: event.target.value })} />
+                      </label>
+                      <button type="submit" className="button primary" disabled={isSubmitting}>Login</button>
+                    </form>
+                  ) : authMode === "signup" ? (
+                    <form className="form-stack" autoComplete="off" onSubmit={handleSignup}>
+                      <label className="field">
+                        <span>Name</span>
+                        <input autoComplete="off" placeholder="Enter your name" value={signupForm.name} onChange={(event) => setSignupForm({ ...signupForm, name: event.target.value })} />
+                      </label>
+                      <label className="field">
+                        <span>Email</span>
+                        <input autoComplete="off" placeholder="Enter your email" value={signupForm.email} onChange={(event) => setSignupForm({ ...signupForm, email: event.target.value })} />
+                      </label>
+                      <label className="field">
+                        <span>Password</span>
+                        <input autoComplete="new-password" placeholder="Create a password" type="password" value={signupForm.password} onChange={(event) => setSignupForm({ ...signupForm, password: event.target.value })} />
+                      </label>
+                      <label className="field">
+                        <span>Wallet Address</span>
+                        <input autoComplete="off" placeholder="Paste your Algorand wallet address" value={signupForm.wallet_address} onChange={(event) => setSignupForm({ ...signupForm, wallet_address: event.target.value })} />
+                      </label>
+                      <div className="hero-actions">
+                        <button type="button" className="button secondary" onClick={connectWallet}>Connect Pera Wallet</button>
+                        <button type="submit" className="button primary" disabled={isSubmitting}>Create Account</button>
+                      </div>
+                      <p className="auth-switch">
+                        Already have an account?{" "}
+                        <button type="button" className="text-button" onClick={() => setAuthMode("login")}>Login</button>
+                      </p>
+                    </form>
+                  ) : (
+                    <form className="form-stack" autoComplete="off" onSubmit={handleLogin}>
+                      <label className="field">
+                        <span>Email</span>
+                        <input autoComplete="off" placeholder="Enter your email" value={loginForm.email} onChange={(event) => setLoginForm({ ...loginForm, email: event.target.value })} />
+                      </label>
+                      <label className="field">
+                        <span>Password</span>
+                        <input autoComplete="new-password" placeholder="Enter your password" type="password" value={loginForm.password} onChange={(event) => setLoginForm({ ...loginForm, password: event.target.value })} />
+                      </label>
+                      <button type="submit" className="button primary" disabled={isSubmitting}>Login</button>
+                      <p className="auth-switch">
+                        Don&apos;t have an account?{" "}
+                        <button type="button" className="text-button" onClick={() => setAuthMode("signup")}>Sign Up</button>
+                      </p>
+                    </form>
+                  )}
+                </div>
+
+                {(statusMessage || errorMessage) ? (
+                  <div className={`status-box ${errorMessage ? "status-error" : "status-success"}`}>
+                    <p>{errorMessage || statusMessage}</p>
+                  </div>
+                ) : null}
+              </section>
+            </div>
+          ) : null}
         </section>
       </main>
     );
@@ -1116,16 +1314,6 @@ function App() {
                           )) : <p className="empty-state">No ledger activity yet.</p>}
                         </div>
                       </article>
-                      <article className="panel glass-panel">
-                        <p className="eyebrow">Platform Snapshot</p>
-                        <h2>Global Revenue</h2>
-                        <div className="notes">
-                          <p>Platform Revenue: {formatAlgoFromMicro(globalStats?.total_spent_all_users || 0)}</p>
-                          <p>Total Claimed: {formatAlgoFromMicro(globalStats?.total_claimed || 0)}</p>
-                          <p>Remaining In System: {formatAlgoFromMicro(globalStats?.total_remaining || 0)}</p>
-                          <p>Users Active: {String(globalStats?.active_users || 0)}</p>
-                        </div>
-                      </article>
                     </section>
                   </>
                 ) : viewerPageContent[currentPage]}
@@ -1161,15 +1349,71 @@ function App() {
           </div>
 
           <aside className="content-side">
+            {isViewer && currentPage === "profile" ? (
+              <>
+                <article className="panel side-card glass-panel recharge-card">
+                  <p className="eyebrow">Wallet Recharge</p>
+                  <h2>Add Funds To Watch</h2>
+                  <div className="recharge-form">
+                    <label className="field recharge-field">
+                      <span>Deposit (ALGO)</span>
+                      <input value={depositAmount} onChange={(event) => setDepositAmount(event.target.value)} />
+                    </label>
+                    <button className="button primary recharge-submit" disabled={isSubmitting} onClick={addFunds}>Add Funds</button>
+                  </div>
+                  <label className="field">
+                    <span>Manual Deposit Tx ID</span>
+                    <input value={manualDepositTxId} onChange={(event) => setManualDepositTxId(event.target.value)} placeholder="Paste confirmed Algorand tx id" />
+                  </label>
+                  <div className="recharge-actions-secondary">
+                    <button className="button secondary" disabled={isSubmitting} onClick={verifyManualDeposit}>Verify Deposit</button>
+                    <button className="button ghost" disabled={isSubmitting} onClick={connectWallet}>Reconnect Wallet</button>
+                    <button className="button danger" disabled={isSubmitting || playbackState === "stopped"} onClick={handleManualStop}>Stop</button>
+                  </div>
+                  <div className="notes compact-notes">
+                    <p>Funds move into escrow with your unique payment note.</p>
+                  </div>
+                  {(claimResult || statusMessage || errorMessage) ? (
+                    <div className={`status-box ${errorMessage ? "status-error" : "status-success"}`}>
+                      <p>{errorMessage || claimResult || statusMessage}</p>
+                    </div>
+                  ) : null}
+                </article>
+
+                <article className="panel side-card glass-panel watchlist-preview-card">
+                  <p className="eyebrow">Watchlist Preview</p>
+                  <h2>Your Queue</h2>
+                  {watchlistPreview.length ? (
+                    <div className="mini-list mini-list-horizontal">
+                      {watchlistPreview.map((item) => (
+                        <button key={`mini-${item.id}`} type="button" className="mini-item mini-item-horizontal" onClick={() => handleMovieSelect(item.id)}>
+                          <img src={item.poster} alt={item.title} />
+                          <div>
+                            <strong>{item.title}</strong>
+                            <span>{item.subtitle}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="empty-state empty-state-rich">
+                      <p>Your watchlist is empty.</p>
+                      <button type="button" className="button secondary" onClick={() => setCurrentPage("explore")}>Browse Movies</button>
+                    </div>
+                  )}
+                </article>
+              </>
+            ) : (
+              <>
             <article className="panel side-card glass-panel profile-card">
               <p className="eyebrow">{isViewer ? "Profile" : "Claim Panel"}</p>
               <h2>{isViewer ? "Premium Account" : "Claim Earnings"}</h2>
               <dl className="details-list">
                 <div><dt>Name</dt><dd>{user.name}</dd></div>
                 <div><dt>Email</dt><dd>{user.email}</dd></div>
-                <div><dt>Stored Wallet</dt><dd>{user.wallet_address}</dd></div>
-                <div><dt>Receiver</dt><dd>{RECEIVER_ACCOUNT.wallet_address}</dd></div>
-                <div><dt>Escrow</dt><dd>{creatorSummary?.escrow_wallet_address || "Contract escrow"}</dd></div>
+                <div><dt>Stored Wallet</dt><dd>{formatAddress(user.wallet_address)}</dd></div>
+                <div><dt>Receiver</dt><dd>{formatAddress(RECEIVER_ACCOUNT.wallet_address)}</dd></div>
+                <div><dt>Escrow</dt><dd>{creatorSummary?.escrow_wallet_address ? formatAddress(creatorSummary.escrow_wallet_address) : "Contract escrow"}</dd></div>
                 {isViewer ? <div><dt>Payment Note</dt><dd>{user.payment_note}</dd></div> : null}
                 <div><dt>Last TX</dt><dd>{latestTx ? `${latestTx.action}: ${latestTx.txId}` : "No transaction yet"}</dd></div>
                 {!isViewer ? <div><dt>Total Claimed</dt><dd>{formatAlgoFromMicro(creatorSummary?.total_claimed_microalgos || 0)}</dd></div> : null}
@@ -1232,7 +1476,7 @@ function App() {
               <p className="eyebrow">{isViewer ? "Watchlist Preview" : "Revenue Snapshot"}</p>
               <h2>{isViewer ? "Your Queue" : "Platform Snapshot"}</h2>
               <div className="mini-list">
-                {(isViewer ? MOVIES.slice(0, 3) : highlightedRow.items.slice(0, 3)).map((item) => (
+                {(isViewer ? watchlistPreview.slice(0, 3) : highlightedRow.items.slice(0, 3)).map((item) => (
                   <button key={`mini-${item.id}`} type="button" className="mini-item" onClick={() => isViewer && handleMovieSelect(item.id)}>
                     <img src={item.poster} alt={item.title} />
                     <div>
@@ -1243,6 +1487,8 @@ function App() {
                 ))}
               </div>
             </article>
+              </>
+            )}
           </aside>
         </section>
 

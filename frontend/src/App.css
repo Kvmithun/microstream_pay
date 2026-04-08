@@ -57,6 +57,441 @@
   position: relative;
 }
 
+.netflix-shell {
+  width: min(var(--content-width), 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: var(--space-7);
+}
+
+.netflix-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 8px 0;
+}
+
+.netflix-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.netflix-brand-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.netflix-logo-image {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.24);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.netflix-logo {
+  font-family: "Poppins", "Segoe UI", sans-serif;
+  font-size: clamp(1.6rem, 3vw, 2.6rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+.netflix-tag {
+  color: var(--muted);
+  font-size: 0.86rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.netflix-top-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.netflix-language,
+.netflix-signin {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.28s var(--ease-premium), background 0.28s var(--ease-premium), border-color 0.28s var(--ease-premium);
+}
+
+.netflix-language {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+
+.netflix-signin {
+  background: linear-gradient(135deg, #f1d4b5, var(--accent));
+  color: #1a1410;
+  border-color: transparent;
+}
+
+.netflix-hero {
+  position: relative;
+  min-height: 720px;
+  border-radius: 32px;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--shadow-xl);
+}
+
+.netflix-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(8, 9, 14, 0.16), rgba(8, 9, 14, 0.8) 78%, rgba(8, 9, 14, 0.98) 100%),
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.03), transparent 45%);
+}
+
+.netflix-hero-content {
+  position: relative;
+  z-index: 1;
+  min-height: 720px;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 140px 32px 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-4);
+}
+
+.netflix-hero-content h1 {
+  margin: 0;
+  font-family: "Poppins", "Segoe UI", sans-serif;
+  font-size: clamp(3rem, 6vw, 4.8rem);
+  line-height: 0.96;
+  letter-spacing: -0.05em;
+  max-width: 12ch;
+}
+
+.netflix-subcopy,
+.netflix-cta-copy {
+  max-width: 720px;
+  color: var(--muted-strong);
+  line-height: 1.7;
+  margin: 0;
+}
+
+.netflix-cta-copy {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.netflix-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.netflix-cta-button,
+.netflix-secondary-button {
+  appearance: none;
+  border-radius: 14px;
+  padding: 16px 26px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.28s var(--ease-premium), box-shadow 0.28s var(--ease-premium), background 0.28s var(--ease-premium);
+}
+
+.netflix-cta-button {
+  border: none;
+  background: linear-gradient(135deg, #f1d4b5, var(--accent));
+  color: #1a1410;
+  box-shadow: 0 16px 34px rgba(219, 163, 108, 0.18);
+}
+
+.netflix-secondary-button {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+}
+
+.netflix-section-header h2,
+.netflix-faq h2 {
+  margin: 0;
+  font-family: "Poppins", "Segoe UI", sans-serif;
+  font-size: clamp(1.7rem, 3vw, 2.3rem);
+  letter-spacing: -0.04em;
+}
+
+.netflix-trending,
+.netflix-reasons,
+.netflix-faq,
+.netflix-membership,
+.netflix-footer {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.netflix-trending-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(180px, 240px);
+  gap: var(--space-5);
+  overflow-x: auto;
+  padding: 12px 6px 8px;
+}
+
+.netflix-rank-card {
+  appearance: none;
+  position: relative;
+  min-height: 320px;
+  border: none;
+  border-radius: 20px;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  padding: 20px;
+  cursor: pointer;
+  transition: transform 0.28s var(--ease-premium), box-shadow 0.28s var(--ease-premium);
+}
+
+.netflix-rank-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 24px 40px rgba(0, 0, 0, 0.24);
+}
+
+.netflix-rank-number {
+  position: absolute;
+  left: -6px;
+  bottom: 6px;
+  font-family: "Poppins", "Segoe UI", sans-serif;
+  font-size: 5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(8, 9, 14, 0.88);
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.45);
+}
+
+.netflix-rank-meta {
+  position: relative;
+  z-index: 1;
+  margin-left: 42px;
+  display: grid;
+  gap: 4px;
+  text-align: left;
+}
+
+.netflix-rank-meta span {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.88rem;
+}
+
+.netflix-reasons-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.netflix-reason-card {
+  min-height: 220px;
+  padding: 26px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(38, 34, 54, 0.86), rgba(24, 22, 36, 0.92)),
+    rgba(255, 255, 255, 0.02);
+  box-shadow: var(--shadow-md);
+}
+
+.netflix-reason-card strong {
+  display: block;
+  margin-bottom: 14px;
+  font-size: 1.35rem;
+  line-height: 1.08;
+}
+
+.netflix-reason-card p {
+  margin: 0;
+  color: var(--muted-strong);
+  line-height: 1.65;
+}
+
+.netflix-faq-list {
+  display: grid;
+  gap: 10px;
+}
+
+.netflix-faq-item {
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.netflix-faq-trigger {
+  width: 100%;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  font: inherit;
+  font-size: 1.15rem;
+  cursor: pointer;
+}
+
+.netflix-faq-answer {
+  padding: 0 28px 24px;
+}
+
+.netflix-faq-answer p {
+  margin: 0;
+  color: var(--muted-strong);
+  line-height: 1.7;
+}
+
+.netflix-membership {
+  justify-items: center;
+  text-align: center;
+}
+
+.netflix-membership-copy {
+  max-width: 760px;
+  margin: 0;
+  color: var(--muted-strong);
+  line-height: 1.7;
+}
+
+.netflix-membership-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+.netflix-footer {
+  padding: 16px 0 56px;
+}
+
+.netflix-footer p,
+.netflix-footer-brand {
+  color: var(--muted);
+  margin: 0;
+}
+
+.netflix-footer-links {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px var(--space-6);
+}
+
+.netflix-footer-links a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.auth-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(7, 8, 13, 0.64);
+  backdrop-filter: blur(14px);
+}
+
+.auth-modal {
+  width: min(520px, 100%);
+  border-radius: 30px;
+  padding: 28px;
+  display: grid;
+  gap: var(--space-4);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+    rgba(18, 20, 28, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.42);
+  animation: authModalIn 0.34s var(--ease-premium) both;
+}
+
+.auth-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.auth-modal-header h2 {
+  margin: 6px 0 0;
+  font-size: clamp(2rem, 3vw, 2.5rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.modal-close {
+  appearance: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.28s var(--ease-premium), background 0.28s var(--ease-premium);
+}
+
+.modal-close:hover {
+  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.auth-modal-switch {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.auth-switch-chip {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted-strong);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.28s var(--ease-premium), background 0.28s var(--ease-premium), border-color 0.28s var(--ease-premium), color 0.28s var(--ease-premium);
+}
+
+.auth-switch-chip-active,
+.auth-switch-chip:hover {
+  color: var(--text);
+  border-color: rgba(219, 163, 108, 0.2);
+  background: linear-gradient(180deg, rgba(219, 163, 108, 0.16), rgba(255, 255, 255, 0.04));
+}
+
+.auth-modal-body {
+  animation: authBodySwap 0.28s var(--ease-premium) both;
+}
+
 .glass-panel,
 .panel,
 .stat-card,
@@ -174,8 +609,8 @@
 }
 
 .auth-hero {
-  width: min(72%, 1040px);
-  min-height: 620px;
+  width: min(100%, var(--content-width));
+  min-height: 560px;
   margin-left: 0;
 }
 
@@ -201,12 +636,13 @@
 
 .auth-layout {
   position: relative;
-  width: min(420px, 100%);
-  margin: -520px 0 0 auto;
-  z-index: 2;
+  width: min(var(--content-width), 100%);
+  margin: -84px auto 0;
+  z-index: 3;
   display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.9fr);
+  gap: var(--space-5);
+  align-items: stretch;
 }
 
 .auth-panel,
@@ -215,12 +651,13 @@
 }
 
 .auth-panel {
-  min-height: 460px;
+  min-height: 420px;
 }
 
 .auth-side {
-  max-width: 380px;
-  justify-self: end;
+  max-width: none;
+  justify-self: stretch;
+  align-self: start;
 }
 
 .hero-banner h1,
@@ -323,6 +760,10 @@
   transform: translateY(-2px) scale(1.015);
 }
 
+.auth-modal .button.primary:hover:not(:disabled) {
+  box-shadow: 0 18px 36px rgba(219, 163, 108, 0.24);
+}
+
 .button:active:not(:disabled) {
   transform: translateY(0) scale(0.985);
 }
@@ -360,6 +801,19 @@
   flex: 1 1 420px;
 }
 
+.auth-screen .hero-banner__content {
+  max-width: 760px;
+  padding-bottom: 132px;
+}
+
+.auth-screen .hero-copy {
+  max-width: 520px;
+}
+
+.auth-screen .hero-actions {
+  margin-top: var(--space-3);
+}
+
 .panel,
 .auth-panel,
 .auth-side {
@@ -367,18 +821,38 @@
   border-radius: var(--radius-xl);
 }
 
+.auth-panel h2,
+.auth-side h2 {
+  font-size: clamp(2rem, 2.6vw, 2.8rem);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+}
+
+.form-stack {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.auth-side .feature-stack {
+  margin-top: var(--space-4);
+}
+
 .feature-stack {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-4);
   margin-top: var(--space-5);
 }
 
 .feature-card {
-  padding: 20px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  padding: 24px;
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
+    rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 24px rgba(0, 0, 0, 0.16);
 }
 
 .feature-card strong,
@@ -396,7 +870,7 @@
 
 .field {
   display: block;
-  margin-top: var(--space-4);
+  margin-top: var(--space-3);
 }
 
 .field span {
@@ -408,7 +882,7 @@
 
 .field input {
   width: 100%;
-  padding: 16px 18px;
+  padding: 17px 18px;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(4, 10, 22, 0.72);
@@ -420,7 +894,7 @@
 .field input:focus {
   outline: none;
   border-color: rgba(255, 122, 24, 0.5);
-  box-shadow: 0 0 0 4px rgba(255, 122, 24, 0.1);
+  box-shadow: 0 0 0 4px rgba(255, 122, 24, 0.1), 0 0 28px rgba(219, 163, 108, 0.12);
 }
 
 .text-button {
@@ -434,8 +908,9 @@
 }
 
 .auth-switch {
-  margin: 18px 0 0;
+  margin: 20px 0 0;
   color: var(--muted);
+  line-height: 1.55;
 }
 
 .status-box {
@@ -457,7 +932,7 @@
 
 .ott-stats-grid,
 .stats-grid {
-  gap: var(--space-4);
+  gap: 24px;
   flex-wrap: wrap;
 }
 
@@ -484,22 +959,22 @@
 }
 
 .content-layout {
-  gap: var(--space-5);
+  gap: 40px;
   align-items: flex-start;
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.72fr);
-  margin-top: -42px;
+  margin-top: 40px;
 }
 
 .content-main {
   min-width: 0;
   display: grid;
-  gap: 32px;
+  gap: 40px;
 }
 
 .browse-panel {
   display: grid;
-  gap: var(--space-5);
+  gap: 24px;
 }
 
 .filter-row {
@@ -551,10 +1026,37 @@
   justify-self: flex-start;
 }
 
-.profile-grid {
+.profile-grid,
+.profile-stack {
   display: grid;
+  gap: 24px;
+}
+
+.profile-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-5);
+}
+
+.profile-stack {
+  grid-template-columns: 1fr;
+}
+
+.profile-section-card {
+  padding: 30px;
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018)),
+    rgba(18, 20, 28, 0.74);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 16px 32px rgba(0, 0, 0, 0.16);
+}
+
+.profile-balance-card {
+  background:
+    radial-gradient(circle at top right, rgba(219, 163, 108, 0.12), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.018)),
+    rgba(18, 20, 28, 0.76);
 }
 
 .profile-hero {
@@ -595,11 +1097,13 @@
 }
 
 .metric-card {
-  padding: 18px 20px;
+  padding: 22px 24px;
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    inset 0 0 24px rgba(255, 255, 255, 0.01);
 }
 
 .metric-card span {
@@ -609,11 +1113,16 @@
   font-size: 0.84rem;
 }
 
+.profile-balance-card .metric-card:first-child strong {
+  font-size: clamp(1.6rem, 2.6vw, 2.4rem);
+  line-height: 1;
+}
+
 .content-side {
   width: 100%;
   min-width: 0;
   display: grid;
-  gap: var(--space-5);
+  gap: 24px;
   position: sticky;
   top: 104px;
 }
@@ -644,7 +1153,7 @@
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(200px, 1fr);
-  gap: var(--space-4);
+  gap: 20px;
   overflow-x: auto;
   padding-bottom: var(--space-2);
   margin-top: var(--space-5);
@@ -690,7 +1199,7 @@
 }
 
 .movie-card:hover {
-  transform: translateY(-4px) scale(1.022);
+  transform: translateY(-4px) scale(1.03);
   box-shadow: 0 18px 36px rgba(8, 11, 24, 0.28), 0 0 0 1px rgba(219, 163, 108, 0.12);
   border-color: rgba(255, 255, 255, 0.15);
   filter: saturate(1.03);
@@ -833,6 +1342,11 @@
   margin-top: var(--space-5);
 }
 
+.mini-list-horizontal {
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
 .mini-item {
   display: grid;
   grid-template-columns: 78px 1fr;
@@ -863,12 +1377,65 @@
   border-radius: 14px;
 }
 
+.mini-item-horizontal {
+  grid-template-columns: 112px 1fr;
+  padding: 12px;
+}
+
+.mini-item-horizontal img {
+  width: 112px;
+  height: 72px;
+  border-radius: 12px;
+}
+
+.recharge-card,
+.watchlist-preview-card {
+  padding: 28px;
+}
+
+.recharge-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: end;
+  margin-top: var(--space-4);
+}
+
+.recharge-field {
+  margin-top: 0;
+}
+
+.recharge-field input {
+  min-height: 58px;
+}
+
+.recharge-submit {
+  min-width: 148px;
+}
+
+.recharge-actions-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: var(--space-4);
+}
+
+.compact-notes {
+  font-size: 0.9rem;
+}
+
 .empty-state {
   color: var(--muted);
-  padding: 18px;
+  padding: 20px;
   border-radius: 14px;
   border: 1px dashed rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.03);
+}
+
+.empty-state-rich {
+  display: grid;
+  gap: 14px;
+  justify-items: start;
 }
 
 .bottom-nav {
@@ -919,19 +1486,46 @@
   }
 }
 
+@keyframes authModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes authBodySwap {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @media (max-width: 1180px) {
+  .netflix-reasons-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .premium-shell {
     padding: 20px;
   }
 
   .auth-hero {
     width: 100%;
-    min-height: 500px;
+    min-height: 520px;
   }
 
   .auth-layout {
-    width: min(460px, 100%);
-    margin: -120px 0 0 auto;
+    width: min(100%, 980px);
+    margin: -64px auto 0;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
   }
 
   .content-layout {
@@ -942,6 +1536,14 @@
   .explore-grid,
   .profile-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .recharge-form {
+    grid-template-columns: 1fr;
+  }
+
+  .recharge-submit {
+    width: 100%;
   }
 
   .content-side {
@@ -957,6 +1559,29 @@
 }
 
 @media (max-width: 960px) {
+  .netflix-topbar,
+  .netflix-top-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .netflix-hero {
+    min-height: 620px;
+  }
+
+  .netflix-hero-content {
+    min-height: 620px;
+    padding-top: 120px;
+  }
+
+  .netflix-footer-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .auth-modal {
+    width: min(560px, 100%);
+  }
+
   .premium-shell {
     display: block;
     padding: 16px 16px 100px;
@@ -973,7 +1598,8 @@
   .auth-layout,
   .inner-panel-grid,
   .content-side,
-  .profile-grid {
+  .profile-grid,
+  .profile-stack {
     display: grid;
     grid-template-columns: 1fr;
   }
@@ -985,6 +1611,11 @@
   .auth-layout {
     width: 100%;
     margin: var(--space-4) 0 0;
+    grid-template-columns: 1fr;
+  }
+
+  .auth-screen .hero-banner__content {
+    padding-bottom: 32px;
   }
 
   .bottom-nav {
@@ -1006,6 +1637,32 @@
 }
 
 @media (max-width: 720px) {
+  .netflix-hero {
+    min-height: 560px;
+  }
+
+  .netflix-hero-content {
+    min-height: 560px;
+    padding: 120px 20px 72px;
+  }
+
+  .netflix-trending-row {
+    grid-auto-columns: 72%;
+  }
+
+  .netflix-reasons-grid,
+  .netflix-footer-links {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-modal {
+    padding: 22px;
+  }
+
+  .auth-modal-switch {
+    flex-wrap: wrap;
+  }
+
   .hero-banner {
     min-height: 340px;
   }
@@ -1016,6 +1673,11 @@
   .auth-side,
   .stat-card {
     padding: 20px;
+  }
+
+  .auth-panel h2,
+  .auth-side h2 {
+    font-size: 1.9rem;
   }
 
   .hero-banner h1 {
