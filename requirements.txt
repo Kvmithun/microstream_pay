@@ -6,3 +6,4 @@ Flask-Cors
 PyJWT
 pymongo
 certifi
+bcrypt

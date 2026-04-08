@@ -2,372 +2,120 @@
 txn ApplicationID
 int 0
 ==
-bnz main_l40
+bnz main_l14
 txn OnCompletion
 int DeleteApplication
 ==
-bnz main_l39
-txna ApplicationArgs 0
-byte "create"
-==
-bnz main_l38
-txna ApplicationArgs 0
-byte "claim"
-==
-bnz main_l17
-txna ApplicationArgs 0
-byte "pause"
-==
 bnz main_l13
 txna ApplicationArgs 0
-byte "resume"
+byte "record"
 ==
 bnz main_l12
 txna ApplicationArgs 0
-byte "stop"
+byte "claim"
 ==
-bnz main_l8
+bnz main_l5
 err
-main_l8:
-txn Sender
-byte "sender"
-app_global_get
-==
-assert
-byte "status"
-app_global_get
-int 0
-!=
-assert
-byte "owed"
-byte "owed"
-app_global_get
-byte "status"
-app_global_get
-int 1
-==
-bnz main_l11
-int 0
-main_l10:
-+
-app_global_put
-byte "last"
-global Round
-app_global_put
-byte "end"
-global Round
-app_global_put
-byte "status"
-int 3
-app_global_put
-int 1
-return
-main_l11:
-global Round
-byte "last"
-app_global_get
--
-byte "rate"
-app_global_get
-*
-b main_l10
-main_l12:
-txn Sender
-byte "sender"
-app_global_get
-==
-assert
-byte "status"
-app_global_get
-int 2
-==
-assert
-byte "last"
-global Round
-app_global_put
-byte "end"
-int 0
-app_global_put
-byte "status"
-int 1
-app_global_put
-int 1
-return
-main_l13:
-txn Sender
-byte "sender"
-app_global_get
-==
-assert
-byte "status"
-app_global_get
-int 1
-==
-assert
-byte "owed"
-byte "owed"
-app_global_get
-byte "status"
-app_global_get
-int 1
-==
-bnz main_l16
-int 0
-main_l15:
-+
-app_global_put
-byte "last"
-global Round
-app_global_put
-byte "status"
-int 2
-app_global_put
-int 1
-return
-main_l16:
-global Round
-byte "last"
-app_global_get
--
-byte "rate"
-app_global_get
-*
-b main_l15
-main_l17:
-byte "status"
-app_global_get
-int 0
-!=
-assert
+main_l5:
 txn Sender
 byte "receiver"
 app_global_get
 ==
 assert
-byte "owed"
-app_global_get
-byte "status"
-app_global_get
-int 1
-==
-bnz main_l37
-int 0
-main_l19:
-+
-store 0
 global CurrentApplicationAddress
 balance
 global CurrentApplicationAddress
 min_balance
 >
-bnz main_l36
+bnz main_l11
 int 0
-main_l21:
-store 1
-byte "owed"
+main_l7:
+store 0
+byte "claimable"
 app_global_get
-byte "status"
-app_global_get
-int 1
-==
-bnz main_l35
-int 0
-main_l23:
-+
-load 1
+load 0
 >
-bnz main_l34
-byte "owed"
+bnz main_l10
+byte "claimable"
 app_global_get
-byte "status"
-app_global_get
-int 1
-==
-bnz main_l33
-int 0
-main_l26:
-+
-main_l27:
-store 2
-load 2
+main_l9:
+store 1
+load 1
 int 0
 >
 assert
-load 2
-int 0
->
-bnz main_l32
-main_l28:
-byte "owed"
-load 0
-load 2
--
-app_global_put
-byte "last"
-byte "status"
-app_global_get
-int 3
-==
-bnz main_l31
-global Round
-main_l30:
-app_global_put
-int 1
-return
-main_l31:
-byte "end"
-app_global_get
-b main_l30
-main_l32:
 itxn_begin
 int pay
 itxn_field TypeEnum
 byte "receiver"
 app_global_get
 itxn_field Receiver
-load 2
+load 1
 itxn_field Amount
 int 0
 itxn_field Fee
 itxn_submit
-b main_l28
-main_l33:
-global Round
-byte "last"
+byte "claimable"
+byte "claimable"
 app_global_get
--
-byte "rate"
-app_global_get
-*
-b main_l26
-main_l34:
 load 1
-b main_l27
-main_l35:
-global Round
-byte "last"
-app_global_get
 -
-byte "rate"
-app_global_get
-*
-b main_l23
-main_l36:
+app_global_put
+int 1
+return
+main_l10:
+load 0
+b main_l9
+main_l11:
 global CurrentApplicationAddress
 balance
 global CurrentApplicationAddress
 min_balance
 -
-b main_l21
-main_l37:
-global Round
-byte "last"
-app_global_get
--
-byte "rate"
-app_global_get
-*
-b main_l19
-main_l38:
+b main_l7
+main_l12:
 txn Sender
-byte "sender"
+byte "admin"
 app_global_get
 ==
-assert
-byte "status"
-app_global_get
-int 0
-==
-byte "status"
-app_global_get
-int 3
-==
-byte "owed"
-app_global_get
-int 0
-==
-&&
-||
 assert
 txn NumAppArgs
-int 3
-==
-assert
-global GroupSize
 int 2
 ==
 assert
-gtxn 0 TypeEnum
-int pay
-==
-assert
-gtxn 0 Sender
-byte "sender"
-app_global_get
-==
-assert
-gtxn 0 Receiver
-global CurrentApplicationAddress
-==
-assert
-gtxn 0 Amount
+txna ApplicationArgs 1
+btoi
+store 2
+load 2
 int 0
 >
 assert
-txn GroupIndex
-int 1
-==
-assert
-byte "receiver"
-txna ApplicationArgs 1
-app_global_put
-byte "rate"
-txna ApplicationArgs 2
-btoi
-app_global_put
-byte "start"
-global Round
-app_global_put
-byte "last"
-global Round
-app_global_put
-byte "owed"
-int 0
-app_global_put
-byte "end"
-int 0
-app_global_put
-byte "status"
-int 1
+byte "claimable"
+byte "claimable"
+app_global_get
+load 2
++
 app_global_put
 int 1
 return
-main_l39:
+main_l13:
 txn Sender
-byte "sender"
+byte "admin"
 app_global_get
 ==
 return
-main_l40:
-byte "sender"
+main_l14:
+txn NumAppArgs
+int 1
+==
+assert
+byte "admin"
 txn Sender
 app_global_put
-byte "rate"
-int 0
+byte "receiver"
+txna ApplicationArgs 0
 app_global_put
-byte "start"
-int 0
-app_global_put
-byte "last"
-int 0
-app_global_put
-byte "owed"
-int 0
-app_global_put
-byte "end"
-int 0
-app_global_put
-byte "status"
+byte "claimable"
 int 0
 app_global_put
 int 1

@@ -4,7 +4,7 @@ ssl._create_default_https_context = ssl._create_unverified_context
 import os
 import base64
 from dotenv import load_dotenv
-from algosdk import mnemonic, account
+from algosdk import mnemonic, account, encoding
 from algosdk.v2client import algod
 from algosdk import transaction
 
@@ -34,9 +34,11 @@ def deploy_app():
     approval_program = compile_program(client, approval_source)
     clear_program = compile_program(client, clear_source)
 
-    # rate, start, last, owed, end, status
-    # sender, receiver
-    global_schema = transaction.StateSchema(num_uints=6, num_byte_slices=2)
+    receiver_address = os.getenv("RECEIVER_WALLET_ADDRESS")
+    if not receiver_address:
+        raise RuntimeError("RECEIVER_WALLET_ADDRESS is required")
+
+    global_schema = transaction.StateSchema(num_uints=1, num_byte_slices=2)
     local_schema = transaction.StateSchema(num_uints=0, num_byte_slices=0)
 
     # Create Transaction
@@ -44,7 +46,8 @@ def deploy_app():
     txn = transaction.ApplicationCreateTxn(
         sender, params, transaction.OnComplete.NoOpOC,
         approval_program, clear_program,
-        global_schema, local_schema
+        global_schema, local_schema,
+        app_args=[encoding.decode_address(receiver_address)]
     )
 
     # Sign and Send

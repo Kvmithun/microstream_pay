@@ -1,161 +1,229 @@
-# 🚀 Micropayment Streaming dApp (Algorand)
+# MicroStream Pay
 
-A non-custodial Web3 application that enables real-time micropayment streaming on the Algorand blockchain.
-Users can continuously stream payments, pause/resume flows, and claim funds securely — all enforced by a smart contract.
+MicroStream Pay is a premium OTT-style demo application that combines local video streaming with Algorand-backed prepaid micropayments. Viewers sign up, add funds into escrow, and watch content while their in-app balance decreases in real time. The creator logs into a separate claim portal and withdraws accumulated earnings from the smart-contract escrow.
 
----
+This project is built as a demo-ready full-stack application with a polished React frontend, Flask backend, MongoDB persistence, Algorand smart contract logic, and Pera Wallet integration for viewer deposits.
 
-## 🧠 Problem
+## What The App Does
 
-Traditional payment systems are rigid:
+- Viewer signup and login with JWT authentication
+- Fixed creator/receiver login with a claim-only dashboard
+- Prepaid OTT payment flow:
+  - viewer deposits ALGO to escrow
+  - playback deducts balance at a fixed per-second rate
+  - creator claims earnings later from escrow
+- Local HTML5 video playback for precise play, pause, resume, and stop control
+- Global revenue tracking across all users
+- Premium multi-page OTT frontend:
+  - Home
+  - Explore
+  - Watchlist
+  - Profile
 
-* No real-time streaming
-* No fine-grained control over payments
-* High trust dependency on intermediaries
+## Core Payment Model
 
-This project solves that by enabling **trustless, programmable money streams**.
+The current product flow is prepaid, not direct wallet-to-wallet streaming.
 
----
+Money moves like this:
 
-## 💡 Solution
+1. Viewer deposits funds into the Algorand escrow app address
+2. Watching updates internal accounting and platform stats
+3. Creator claims accumulated earnings from escrow
 
-We built a decentralized micropayment streaming system where:
+This means:
 
-* 💸 Payments accrue continuously over time
-* ⏸️ Sender can pause/resume streams
-* 🛑 Stop freezes accrual (no forced payout)
-* 💰 Receiver claims funds anytime
-* 🔐 Smart contract enforces all rules
+- Deposit: `Viewer -> Escrow`
+- Watching: `No direct on-chain transfer`
+- Claim: `Escrow -> Creator`
 
-No custody. No intermediaries. Fully on-chain logic.
+## Roles
 
----
+### Viewer
 
-## ⚙️ Key Features
+- Can sign up and log in
+- Connects Pera Wallet
+- Adds funds
+- Watches local video clips
+- Uses watchlist, explore, and profile pages
 
-### 🔁 Streaming Logic
+### Creator / Receiver
 
-* Create payment streams with defined duration
-* Real-time accrual based on blockchain rounds
-* Accurate tracking of:
+There is one fixed receiver account for the demo:
 
-  * total deposit
-  * claimed amount
-  * remaining balance
-  * last claim round
-  * stream status
+- Name: `mithun`
+- Email: `kvmithun1234@gmail.com`
+- Role: `receiver`
+- Wallet: `AL3JJ527I262UMN6BKSZM2B3PKYM2LHILXFE4EXBZXYJDGYC2VBBEIA3TY`
 
-### 🎮 Control System
+The receiver:
 
-* **Sender controls**
+- does not sign up
+- logs in manually
+- sees only the claim dashboard
+- claims earnings from escrow
 
-  * Create stream
-  * Pause / Resume
-  * Stop (freeze accrual)
+## Features
 
-* **Receiver control**
+### Viewer Experience
 
-  * Claim accrued funds
+- Premium OTT landing and playback UI
+- Local poster art and video clips
+- Global watch timer across video switching
+- Live deduction at a fixed rate
+- Deposit verification through Algorand transaction confirmation
+- Watchlist and explore pages
+- Profile page for balance, usage, and payment info
 
-### 🔐 Web3 Architecture
+### Creator Experience
 
-* Non-custodial wallet-based interaction
-* Transactions signed via **Pera Wallet**
-* Backend never accesses private keys
+- Separate claim dashboard
+- Total claimed amount
+- Remaining balance in system
+- Platform revenue
+- Claim history with transaction references
 
----
+### Platform Revenue Tracking
 
-## 🏗️ Tech Stack
+The backend maintains persisted global stats:
 
-### 🧱 Blockchain
+- `total_spent_all_users`
+- `total_claimed`
+- `total_remaining`
+- `active_users`
 
-* Algorand (TestNet)
-* Smart Contracts (PyTeal / TEAL)
+These are updated from backend logic, not frontend-only calculations.
 
-### 🖥️ Backend
+## Tech Stack
 
-* Flask
-* MongoDB
-* JWT Authentication
+### Frontend
 
-### 🌐 Frontend
+- React
+- CSS with premium Glassmorphism + Minimal Luxury styling
+- HTML5 video player
+- Pera Wallet integration
 
-* React
-* Wallet integration (Pera Wallet)
-* Role-based dashboards
+### Backend
 
----
+- Flask
+- MongoDB
+- JWT authentication
+- Bcrypt password hashing
 
-## 🔄 System Architecture
+### Blockchain
 
-* Frontend builds transactions
-* Wallet signs transactions
-* Blockchain executes logic
-* Backend verifies and records transactions
+- Algorand TestNet
+- PyTeal / TEAL smart contract
+- Escrow app for creator payout flow
 
----
+## Current Algorand Details
 
-## 🧪 Current Status
+- Network: `Algorand TestNet`
+- Current escrow app id: `758498032`
+- Escrow app address: `FZIAMILXMAUIKFN2DO3734C36UCDEAUXK2LOGTN6JTBVFHIHGP5TJXO3TQ`
 
-✅ Smart contract deployed on Algorand TestNet
-✅ Non-custodial wallet flow implemented
-✅ Full sender + receiver interaction working
-✅ Backend verification + DB sync complete
+## Local Project Structure
 
-⚠️ Final stage:
+```text
+micropay-stream/
+├── backend/
+├── contract/
+├── frontend/
+├── scripts/
+├── requirements.txt
+├── README.md
+└── .env
+```
 
-* End-to-end validation on latest contract version
-* Demo polish and stability testing
+## Frontend Assets
 
----
+Local video clips and banners are served from:
 
-## 📍 Deployment Details
+- `frontend/public/images/`
+- `frontend/public/videos/`
 
-* **Network:** Algorand TestNet
-* **App ID:** `758345227`
+The HTML5 player depends on those local files for the final OTT demo experience.
 
----
+## How To Run Locally
 
-## 🚀 How It Works
+### 1. Backend
 
-1. User connects wallet
-2. Sender creates a payment stream
-3. Funds accrue over time on-chain
-4. Sender can pause/resume/stop
-5. Receiver claims funds anytime
+From the project root:
 
----
+```bash
+source venv/bin/activate
+venv/bin/python backend/app.py
+```
 
-## 🎯 Why This Matters
+Backend runs on:
 
-This system enables:
+`http://127.0.0.1:5050`
 
-* Freelance time-based payments
-* Subscription models without lock-in
-* Real-time payroll systems
-* Trustless financial agreements
+### 2. Frontend
 
----
+In a second terminal:
 
-## ⚠️ Disclaimer
+```bash
+cd frontend
+npm start
+```
 
-This project is deployed on Algorand TestNet for demonstration purposes.
-Not intended for production use without further security audits.
+Frontend runs on:
 
----
+`http://localhost:3000`
 
-## 👨‍💻 Contributors
+## Environment Configuration
 
-* Your Name
+Typical `.env` values used by this project include:
 
----
+```env
+JWT_SECRET=batman_secret_key_2026
+ALGOD_ADDRESS=https://testnet-api.algonode.cloud
+ALGOD_TOKEN=
+MONGO_URI=your_mongodb_uri
+APP_ID=758498032
+RECEIVER_ADDRESS=AL3JJ527I262UMN6BKSZM2B3PKYM2LHILXFE4EXBZXYJDGYC2VBBEIA3TY
+```
 
-## ⭐ Future Improvements
+Note:
 
-* MainNet deployment
-* UI/UX enhancements
-* Advanced analytics dashboard
-* Multi-stream management
-* Gas optimization
+- viewer transactions are signed with Pera Wallet
+- creator claim currently uses the backend-controlled fixed receiver flow for the demo
 
----
+## Demo Flow
+
+### Viewer
+
+1. Sign up or log in
+2. Connect Pera Wallet
+3. Add funds to escrow
+4. Open a movie
+5. Press play
+6. Watch balance decrease in real time
+7. Pause/resume without resetting session totals
+
+### Creator
+
+1. Log in with the fixed creator account
+2. Open the claim dashboard
+3. Review platform revenue and claim history
+4. Click `Claim Earnings`
+5. Receive payout from escrow
+
+## Important Notes
+
+- Very small creator claims may be swallowed by Algorand transaction fees, so the app blocks tiny claims until earnings are large enough.
+- WalletConnect source-map warnings may appear during local development; these are third-party development warnings and do not mean the app is broken.
+- This project is intended for TestNet/demo usage.
+
+## Future Improvements
+
+- Cleaner suppression of WalletConnect dev warnings
+- MainNet-hardening and security review
+- Better analytics for creator revenue over time
+- More content metadata and editorial curation
+- Multi-creator support instead of a single fixed receiver account
+
+## Author
+
+- Mithun
+

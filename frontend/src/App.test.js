@@ -3,5 +3,5 @@ import App from "./App";
 
 test("renders the auth dashboard title", () => {
   render(<App />);
-  expect(screen.getByText(/role-based streaming micropayments/i)).toBeInTheDocument();
+  expect(screen.getByText(/playback-synced streaming micropayments/i)).toBeInTheDocument();
 });

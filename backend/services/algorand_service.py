@@ -2,22 +2,19 @@ import base64
 from datetime import datetime, timezone
 from pathlib import Path
 
-from algosdk import encoding
+from algosdk import encoding, mnemonic, account, transaction
 from algosdk.logic import get_application_address
 from algosdk.v2client import algod
 
 
 class AlgorandService:
-    STATUS_IDLE = 0
-    STATUS_ACTIVE = 1
-    STATUS_PAUSED = 2
-    STATUS_STOPPED = 3
-
     def __init__(self, config):
         self.algod_client = algod.AlgodClient(config["ALGOD_TOKEN"], config["ALGOD_ADDRESS"])
         self.default_app_id = config.get("APP_ID")
         self.contract_dir = Path(__file__).resolve().parents[2] / "contract"
         self._compiled_contract = None
+        self.admin_private_key = mnemonic.to_private_key(config["MNEMONIC"])
+        self.admin_address = account.address_from_private_key(self.admin_private_key)
 
     def _decode_state_value(self, value):
         if value.get("type") == 2:
@@ -37,57 +34,39 @@ class AlgorandService:
             state[key] = self._decode_state_value(item["value"])
         return info, state
 
-    def _status_label(self, status_value):
-        if status_value == self.STATUS_IDLE:
-            return "idle"
-        if status_value == self.STATUS_ACTIVE:
-            return "active"
-        if status_value == self.STATUS_PAUSED:
-            return "paused"
-        if status_value == self.STATUS_STOPPED:
-            return "stopped"
-        return "unknown"
-
     def _resolve_app_id(self, app_id=None):
         resolved = app_id or self.default_app_id
         if not resolved:
             raise ValueError("No stream app id was provided.")
         return int(resolved)
 
+    def escrow_address(self, app_id=None):
+        return get_application_address(self._resolve_app_id(app_id))
+
     def get_status(self, app_id=None):
         resolved_app_id = self._resolve_app_id(app_id)
         app_info, state = self._global_state(resolved_app_id)
-        status_value = int(state.get("status", 0))
-        last_round = int(self.algod_client.status().get("last-round", 0))
-        last_claim_round = int(state.get("last", 0))
-        end_round = int(state.get("end", 0))
-        claim_round = end_round if status_value == self.STATUS_STOPPED and end_round else last_round
-        claimable_rounds = (
-            max(claim_round - last_claim_round, 0)
-            if status_value in {self.STATUS_ACTIVE, self.STATUS_STOPPED} and last_claim_round
-            else 0
-        )
-        claimable_amount = int(state.get("owed", 0)) + claimable_rounds * int(state.get("rate", 0))
         account_info = self.algod_client.account_info(get_application_address(resolved_app_id))
         account_balance = int(account_info.get("amount", 0))
         min_balance = int(account_info.get("min-balance", 0))
         remaining_balance = max(account_balance - min_balance, 0)
+        claimable_amount = min(int(state.get("claimable", 0)), remaining_balance)
 
         return {
             "app_id": resolved_app_id,
             "app_address": get_application_address(resolved_app_id),
-            "sender": state.get("sender", ""),
+            "sender": state.get("admin", ""),
             "receiver": state.get("receiver", ""),
-            "rate": int(state.get("rate", 0)),
+            "rate": 0,
             "deposit_balance": account_balance,
             "remaining_balance": remaining_balance,
-            "start_round": int(state.get("start", 0)),
-            "end_round": end_round or None,
-            "last_claim_round": last_claim_round,
-            "owed": int(state.get("owed", 0)),
-            "status": self._status_label(status_value),
-            "status_code": status_value,
-            "current_round": last_round,
+            "start_round": 0,
+            "end_round": None,
+            "last_claim_round": 0,
+            "owed": claimable_amount,
+            "status": "active" if claimable_amount else "idle",
+            "status_code": 1 if claimable_amount else 0,
+            "current_round": int(self.algod_client.status().get("last-round", 0)),
             "claimable_amount": min(claimable_amount, remaining_balance),
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "raw_app": app_info,
@@ -152,6 +131,67 @@ class AlgorandService:
     def verify_claim(self, app_id, tx_id, receiver):
         self._require_app_call(tx_id, app_id, receiver, "claim")
         return self.get_status(app_id)
+
+    def execute_receiver_claim(self, app_id=None):
+        resolved_app_id = self._resolve_app_id(app_id)
+        params = self.algod_client.suggested_params()
+        params.flat_fee = True
+        params.fee = 2000
+
+        txn = transaction.ApplicationNoOpTxn(
+            self.admin_address,
+            params,
+            resolved_app_id,
+            app_args=[b"claim"],
+        )
+        signed = txn.sign(self.admin_private_key)
+        tx_id = self.algod_client.send_transaction(signed)
+        transaction.wait_for_confirmation(self.algod_client, tx_id, 8)
+        return {"tx_id": tx_id, "status": self.get_status(resolved_app_id)}
+
+    def record_usage(self, amount, app_id=None):
+        resolved_app_id = self._resolve_app_id(app_id)
+        amount = int(amount or 0)
+        if amount <= 0:
+            raise ValueError("Usage amount must be greater than zero.")
+
+        params = self.algod_client.suggested_params()
+        txn = transaction.ApplicationNoOpTxn(
+            self.admin_address,
+            params,
+            resolved_app_id,
+            app_args=[b"record", amount.to_bytes(8, "big")],
+        )
+        signed = txn.sign(self.admin_private_key)
+        tx_id = self.algod_client.send_transaction(signed)
+        transaction.wait_for_confirmation(self.algod_client, tx_id, 8)
+        return {"tx_id": tx_id, "status": self.get_status(resolved_app_id)}
+
+    def verify_deposit(self, tx_id, expected_sender, expected_receiver, expected_note):
+        _, txn = self._txn_body(tx_id)
+        if txn.get("type") != "pay":
+            raise ValueError("Deposit transaction is not a payment.")
+        if txn.get("snd") != expected_sender:
+            raise ValueError("Deposit sender does not match the connected wallet.")
+        if txn.get("rcv") != expected_receiver:
+            raise ValueError("Deposit receiver does not match the platform wallet.")
+
+        raw_note = txn.get("note", "")
+        decoded_note = base64.b64decode(raw_note).decode("utf-8") if raw_note else ""
+        if decoded_note != expected_note:
+            raise ValueError("Deposit note does not match this viewer account.")
+
+        amount = int(txn.get("amt", 0))
+        if amount <= 0:
+            raise ValueError("Deposit amount must be greater than zero.")
+
+        return {
+            "tx_id": tx_id,
+            "sender": txn.get("snd"),
+            "receiver": txn.get("rcv"),
+            "amount": amount,
+            "note": decoded_note,
+        }
 
     def contract_spec(self):
         if self._compiled_contract:

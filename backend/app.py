@@ -4,6 +4,7 @@ from pymongo import MongoClient
 from algosdk.error import AlgodHTTPError
 
 from config import Config
+from models.global_stats_model import GlobalStatsModel
 from models.stream_model import StreamModel
 from models.transaction_model import TransactionModel
 from models.user_model import UserModel
@@ -28,12 +29,13 @@ def create_app():
     database = mongo_client.get_default_database()
 
     app.user_model = UserModel(database)
+    app.global_stats_model = GlobalStatsModel(database)
     app.stream_model = StreamModel(database)
     app.transaction_model = TransactionModel(database)
     app.algorand_service = AlgorandService(app.config)
 
     app.register_blueprint(auth_bp)
-    app.register_blueprint(sender_bp, url_prefix="/sender")
+    app.register_blueprint(sender_bp, url_prefix="/viewer")
     app.register_blueprint(receiver_bp, url_prefix="/receiver")
 
     @app.get("/health")
@@ -50,6 +52,19 @@ def create_app():
     @app.get("/contract-spec")
     def contract_spec():
         return jsonify(app.algorand_service.contract_spec())
+
+    @app.get("/global-stats")
+    def global_stats():
+        stats = app.global_stats_model.get_stats()
+        active_users = len(app.user_model.find_by_role("user"))
+        return jsonify(
+            {
+                "total_spent_all_users": int(stats.get("total_spent_all_users", 0)),
+                "total_claimed": int(stats.get("total_claimed", 0)),
+                "total_remaining": int(stats.get("total_remaining", 0)),
+                "active_users": active_users,
+            }
+        )
 
     @app.before_request
     def handle_preflight():
@@ -97,4 +112,4 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5050)

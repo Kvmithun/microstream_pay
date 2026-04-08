@@ -15,6 +15,10 @@ def _serialize_user(user):
         "email": user["email"],
         "role": user["role"],
         "wallet_address": user.get("wallet_address", ""),
+        "payment_note": user.get("payment_note", ""),
+        "balance_microalgos": int(user.get("balance_microalgos", 0)),
+        "total_spent_microalgos": int(user.get("total_spent_microalgos", 0)),
+        "total_watch_seconds": int(user.get("total_watch_seconds", 0)),
         "created_at": user.get("created_at"),
     }
 
@@ -27,8 +31,8 @@ def signup():
     if missing:
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
 
-    if data["role"] not in {"sender", "receiver"}:
-        return jsonify({"error": "Role must be sender or receiver"}), 400
+    if data["role"] != "user":
+        return jsonify({"error": "Signup only supports user accounts"}), 400
 
     if current_app.user_model.find_by_email(data["email"]):
         return jsonify({"error": "User already exists"}), 409
@@ -47,7 +51,11 @@ def signup():
 def login():
     data = request.get_json(force=True)
     user = current_app.user_model.find_by_email(data.get("email", ""))
-    if not user or not current_app.user_model.verify_password(user, data.get("password", "")):
+
+    if not user:
+        return jsonify({"error": "User not found. Please sign up."}), 404
+
+    if not current_app.user_model.verify_password(user, data.get("password", "")):
         return jsonify({"error": "Invalid credentials"}), 401
 
     token = jwt.encode(
